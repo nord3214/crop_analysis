@@ -1,0 +1,3 @@
+.venv/*
+noaa_weather/*.csv
+*.pyc
