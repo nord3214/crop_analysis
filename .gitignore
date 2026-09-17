@@ -1,3 +1,5 @@
 .venv/*
 noaa_weather/*.csv
 *.pyc
+data/raw/noaa/*.csv
+.vscode/settings.json
