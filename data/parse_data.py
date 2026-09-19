@@ -2,6 +2,13 @@ from datetime import datetime
 import os
 import pandas as pd
 
+item_names = {
+    "PEANUTS - ACRES HARVESTED": "acres_harvested",
+    "PEANUTS - ACRES PLANTED": "acres_planted",
+    "PEANUTS - PRODUCTION, MEASURED IN LB": "production_lb",
+    "PEANUTS - YIELD, MEASURED IN LB / ACRE": "yield_lb_acre",
+}
+
 
 def create_date_col(row):
         date = f"{row['year']}-{row['month']}-{row['day'].split('_')[1]}"
@@ -94,12 +101,6 @@ def parse_peanut_data():
         dtype=str,
     )
 
-    item_names = {
-        "PEANUTS - ACRES HARVESTED": "acres_harvested",
-        "PEANUTS - ACRES PLANTED": "acres_planted",
-        "PEANUTS - PRODUCTION, MEASURED IN LB": "production_lb",
-        "PEANUTS - YIELD, MEASURED IN LB / ACRE": "yield_lb_acre",
-    }
 
 
 
@@ -154,12 +155,13 @@ def combine_datasets():
     
     df_nass = pd.read_csv(nass_file)
     df_nass = df_nass.rename(columns={"County": "region_name", "Year": "year"})
-    df_nass["year"] = pd.to_datetime(df_nass["year"], format="%Y")
     combined_df.reset_index(inplace=True)
     combined_df["region_name"] = combined_df["region_name"].str.replace("FL: ", "", regex=False).str.replace(" County", "", regex=False).str.upper()
     combined_df["date"] = pd.to_datetime(combined_df["date"])
-    final_combined_df = pd.merge(combined_df, df_nass, left_on=["region_name", "date"], right_on=["region_name", "year"], how="left")
+    combined_df["year"] = combined_df["date"].dt.year
 
+    final_combined_df = pd.merge(combined_df, df_nass, left_on=["region_name", "year"], right_on=["region_name", "year"], how="left")
+    final_combined_df = final_combined_df.drop(columns=["year"])
     final_combined_df.to_csv("data/final/combined_dataset.csv", index=False)
     print("Combined dataset saved to data/final/combined_dataset.csv")
 
