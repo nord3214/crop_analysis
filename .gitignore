@@ -3,3 +3,17 @@ noaa_weather/*.csv
 *.pyc
 data/raw/noaa/*.csv
 .vscode/settings.json
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+main.pdf
