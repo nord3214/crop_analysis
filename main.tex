@@ -14,6 +14,8 @@
 
 \section{Introduction}
 
+This project can be reproduced using the code and data available at \url{https://github.com/nord3214/crop_analysis}.
+
 \newpage
 
 \section{Background}
@@ -94,13 +96,13 @@ Figure~\ref{fig:hist-yield} shows the distribution of peanut yield across county
 \label{fig:hist-yield}
 \end{figure}
 
-Figure~\ref{fig:boxplot-county} shows yield by county. There is substantial cross-county variation in both the typical yield level and its spread, indicating that county-specific factors (soil type, farming practices, local climate) account for meaningful differences in yield, independent of year-to-year weather variation. This motivates controlling for county-level differences in later analysis.
+Figure~\ref{fig:heatmap-county-year} shows yield by county and year jointly, with gray cells marking county-years without a reported yield. Two patterns stand out. First, there is substantial cross-county variation in typical yield level, with some counties (e.g.\ Santa Rosa, Suwannee) consistently in the higher-yield range and others (e.g.\ Walton, Holmes) consistently lower, indicating that county-specific factors (soil type, farming practices, local climate) account for meaningful differences in yield independent of year-to-year weather. This motivates including county fixed effects in the identification strategy developed in the next section. Second, yield levels trend visibly higher in more recent years across many counties, and several counties share a common gap in reported data around 2007--2009, both suggesting a statewide factor common to all counties in a given year (technology, reporting changes, statewide conditions) rather than purely county-specific variation. This motivates including year fixed effects alongside county fixed effects. A county-level boxplot view of the same yield variable, which summarizes each county's distribution without the year dimension, is provided in Appendix~\ref{app:boxplot} for reference.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth]{data/output/figures/boxplot_yield_by_county.png}
-\caption{Peanut yield by county}
-\label{fig:boxplot-county}
+\includegraphics[width=\textwidth]{data/output/figures/heatmap_yield_county_year.png}
+\caption{Peanut yield by county and year}
+\label{fig:heatmap-county-year}
 \end{figure}
 
 Finally, Figure~\ref{fig:scatter-prcp} plots yield against growing-season total precipitation. The fitted quadratic trend is close to flat, suggesting that the relationship between yield and precipitation is weak, or at least not well captured by a single growing-season total. This is consistent with the literature reviewed in Section~\ref{subsec:existing-research}, which finds that the timing of precipitation within the growing season, rather than the seasonal total, is what matters most for peanut yield, and motivates the more disaggregated, within-season weather measures to be used in the subsequent analysis.
@@ -119,6 +121,23 @@ To check this directly, Figure~\ref{fig:monthly-corr} plots the correlation betw
 \includegraphics[width=0.8\textwidth]{data/output/figures/monthly_correlation_with_yield.png}
 \caption{Correlation of monthly temperature and precipitation with peanut yield, by month}
 \label{fig:monthly-corr}
+\end{figure}
+
+\newpage
+
+\appendix
+\section{Appendix}
+
+\subsection{Peanut Yield by County}
+\label{app:boxplot}
+
+Figure~\ref{fig:boxplot-county} shows the distribution of peanut yield for each county, pooled across all years. This is the same underlying yield data shown in Figure~\ref{fig:heatmap-county-year}, summarized without the year dimension.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{data/output/figures/boxplot_yield_by_county.png}
+\caption{Peanut yield by county (pooled across years)}
+\label{fig:boxplot-county}
 \end{figure}
 
 \newpage

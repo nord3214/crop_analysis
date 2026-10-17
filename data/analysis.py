@@ -1,8 +1,10 @@
+import calendar
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
 
 from data.parse_data import item_names
 
@@ -25,7 +27,6 @@ def load_combined_data(path: str = COMBINED_DATA_PATH) -> pd.DataFrame:
     df["month"] = df["date"].dt.month
     df = df[df["yield_lb_acre"].notna()]
     return df
-
 
 def build_growing_season_panel(df: pd.DataFrame) -> pd.DataFrame:
     """One row per county-year: deduplicated crop values + aggregated growing-season weather."""
@@ -177,6 +178,35 @@ def plot_boxplot_by_county(panel: pd.DataFrame, figures_dir: Path = FIGURES_DIR)
     plt.close()
 
 
+def plot_heatmap_yield_by_county_year(panel: pd.DataFrame, figures_dir: Path = FIGURES_DIR) -> None:
+    """County x year grid of yield, so cross-county and cross-year patterns show up in one figure."""
+    pivot = panel.pivot_table(index="region_name", columns="year", values="yield_lb_acre", aggfunc="first")
+    pivot = pivot.sort_index()
+
+    data = np.ma.masked_invalid(pivot.values)
+
+    cmap = plt.get_cmap("viridis").copy()
+    cmap.set_bad(color="lightgray")
+
+    fig, ax = plt.subplots(figsize=(14, 8))
+    mesh = ax.pcolormesh(data, cmap=cmap, edgecolors="white", linewidth=0.3)
+
+    ax.set_xticks(np.arange(len(pivot.columns)) + 0.5)
+    ax.set_xticklabels(pivot.columns, rotation=90)
+    ax.set_yticks(np.arange(len(pivot.index)) + 0.5)
+    ax.set_yticklabels(pivot.index)
+    ax.invert_yaxis()
+
+    ax.set_xlabel("Year")
+    ax.set_ylabel("County")
+    ax.set_title("Peanut yield by county and year (gray = no data)")
+
+    fig.colorbar(mesh, ax=ax, label="Yield (lb/acre)")
+    fig.tight_layout()
+    fig.savefig(figures_dir / "heatmap_yield_county_year.png")
+    plt.close(fig)
+
+
 def plot_monthly_timing(
     panel: pd.DataFrame, monthly: pd.DataFrame, figures_dir: Path = FIGURES_DIR
 ) -> pd.DataFrame:
@@ -214,6 +244,29 @@ def plot_monthly_timing(
 
     return corr_by_month
 
+def pivot_monthly_weather(monthly: pd.DataFrame, crop_panel: pd.DataFrame) -> pd.DataFrame:
+    """Pivot monthly weather data to have one row per county-year, with columns for each month's weather data"""
+    pivoted_tavg = monthly.pivot(
+        index=["region_name", "year"],
+        columns="month",
+        values="tavg_mean"
+    )
+    month_tavg_dict = {i: f"tavg_{calendar.month_abbr[i].lower()}" for i in range(1, 13)}
+    pivoted_tavg.rename(columns=month_tavg_dict, inplace=True)
+
+    pivoted_prcp = monthly.pivot(
+        index=["region_name", "year"],
+        columns="month",
+        values="prcp_total"
+    )
+    month_prcpt_dict = {i: f"prcp_{calendar.month_abbr[i].lower()}" for i in range(1, 13)}
+    pivoted_prcp.rename(columns=month_prcpt_dict, inplace=True)
+
+    pivoted_long = pd.concat([pivoted_tavg, pivoted_prcp], axis=1).reset_index()
+    pivoted_with_crop = pd.DataFrame.merge(pivoted_long, crop_panel, on=["region_name", "year"], how="inner")
+    
+    return pivoted_with_crop
+
 
 if __name__ == "__main__":
     complete_df = load_combined_data()
@@ -222,6 +275,9 @@ if __name__ == "__main__":
     panel.to_csv(PANEL_OUTPUT_PATH, index=False)
 
     monthly_weather = build_monthly_weather(complete_df)
+
+    pivoted_monthly_weather = pivot_monthly_weather(monthly_weather, panel)
+    pivoted_monthly_weather.to_csv(TABLES_DIR / "pivoted_monthly_weather.csv", index=False)
 
     summarize(panel)
     plot_histograms(panel)
@@ -241,6 +297,7 @@ if __name__ == "__main__":
         "scatter_yield_vs_extreme_heat.png", degree=1,
     )
     plot_boxplot_by_county(panel)
+    plot_heatmap_yield_by_county_year(panel)
     plot_monthly_timing(panel, monthly_weather)
 
     statistics_by_county(panel)
