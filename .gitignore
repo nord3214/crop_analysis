@@ -17,3 +17,5 @@ data/raw/noaa/*.csv
 *.synctex.gz
 *.toc
 main.pdf
+.vscode/launch.json
+.vscode/launch.json

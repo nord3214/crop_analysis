@@ -13,6 +13,11 @@ PANEL_OUTPUT_PATH = "data/final/county_year_panel.csv"
 FIGURES_DIR = Path("data/output/figures")
 TABLES_DIR = Path("data/output/tables")
 
+MONTH_TAVG_DICT = {i: f"tavg_{calendar.month_abbr[i].lower()}" for i in range(4, 11)}
+MONTH_PRCPT_DICT = {i: f"prcp_{calendar.month_abbr[i].lower()}" for i in range(4, 11)}
+
+
+
 CROP_COLUMNS = ["County ANSI"] + list(item_names.values())
 
 # NOAA nClimGrid-Daily values are Celsius / mm.
@@ -251,16 +256,15 @@ def pivot_monthly_weather(monthly: pd.DataFrame, crop_panel: pd.DataFrame) -> pd
         columns="month",
         values="tavg_mean"
     )
-    month_tavg_dict = {i: f"tavg_{calendar.month_abbr[i].lower()}" for i in range(1, 13)}
-    pivoted_tavg.rename(columns=month_tavg_dict, inplace=True)
+
+    pivoted_tavg.rename(columns=MONTH_TAVG_DICT, inplace=True)
 
     pivoted_prcp = monthly.pivot(
         index=["region_name", "year"],
         columns="month",
         values="prcp_total"
     )
-    month_prcpt_dict = {i: f"prcp_{calendar.month_abbr[i].lower()}" for i in range(1, 13)}
-    pivoted_prcp.rename(columns=month_prcpt_dict, inplace=True)
+    pivoted_prcp.rename(columns=MONTH_PRCPT_DICT, inplace=True)
 
     pivoted_long = pd.concat([pivoted_tavg, pivoted_prcp], axis=1).reset_index()
     pivoted_with_crop = pd.DataFrame.merge(pivoted_long, crop_panel, on=["region_name", "year"], how="inner")

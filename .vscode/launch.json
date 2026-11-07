@@ -5,12 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Crop Analysis",
+            "name": "Python Debugger: Current data/ file as module",
             "type": "debugpy",
             "request": "launch",
-            "module": "data.analysis",
+            "module": "data.${fileBasenameNoExtension}",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
         }
+
     ]
 }

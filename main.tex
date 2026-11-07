@@ -1,6 +1,7 @@
 \documentclass{article}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{amsmath}
 \usepackage{biblatex}
 \addbibresource{citation.bib}
 
@@ -49,6 +50,7 @@ Research focusing specifically on peanuts provides further evidence that the rel
 Together, these studies suggest that both the magnitude and timing of weather conditions may be important for peanut production. They also indicate that the relationship between precipitation and yield may not be strictly linear. However, the existing research does not directly examine whether these relationships can be detected in county-level peanut production across Florida over time. This project therefore investigates whether variation in growing-season temperature and precipitation is associated with changes in peanut yields across Florida counties. By combining county-level peanut yield data with daily weather observations, the analysis examines weather conditions during the crop's production cycle rather than relying solely on annual weather averages. This provides the basis for the identification strategy developed in the following sections.
 
 \section{Dataset}
+\label{sec:dataset}
 
 \subsection{Weather Data}
 
@@ -122,6 +124,110 @@ To check this directly, Figure~\ref{fig:monthly-corr} plots the correlation betw
 \caption{Correlation of monthly temperature and precipitation with peanut yield, by month}
 \label{fig:monthly-corr}
 \end{figure}
+
+\newpage
+
+\section{Identification Strategy}
+
+\subsection{Empirical Specification}
+
+As discussed in Section~\ref{subsec:existing-research} and illustrated in Figure~\ref{fig:heatmap-county-year}, a simple comparison of yield 
+and weather across county-years is confounded by two sources of variation unrelated to any causal effect of weather: persistent differences 
+between counties (soil quality, farming practices, local climate, specific regional irrigation) and shocks common to all counties in a given
+ year (technology trends, statewide conditions, reporting changes). To isolate the relationship between weather and yield from these variations, 
+this analysis uses a two-way fixed-effects panel regression, which compares each county's yield to its own average and each year's yield to the 
+statewide average in that year, rather than comparing counties or years to one another directly.
+
+Two specifications are estimated on the 420 county-year observations described in Section~\ref{sec:dataset}. 
+The first uses the growing-season weather aggregates already reported in Table~\ref{tab:summary-stats}:
+
+\begin{equation}
+\text{yield}_{c,t} = \alpha_c + \delta_t + \beta_1 \, \text{prcp\_total}_{c,t} + \beta_2 \, \text{tavg\_mean}_{c,t} + \varepsilon_{c,t}
+\label{eq:baseline}
+\end{equation}
+
+The second replaces the two growing-season aggregates with separate precipitation and temperature terms for each month of the growing season, 
+directly testing whether the timing pattern suggested by Figure~\ref{fig:monthly-corr} holds once county and year fixed effects are controlled for:
+
+\begin{equation}
+\text{yield}_{c,t} = \alpha_c + \delta_t + \sum_{m=\text{Apr}}^{\text{Oct}} \beta_m \, \text{prcp}_{c,t,m} + \sum_{m=\text{Apr}}^{\text{Oct}} \gamma_m \, \text{tavg}_{c,t,m} + \varepsilon_{c,t}
+\label{eq:monthly}
+\end{equation}
+
+In both specifications, $\alpha_c$ is a county fixed effect, $\delta_t$ is a year fixed effect, and standard errors are clustered by county to account 
+for the likelihood that unobserved shocks to a given county's yield are correlated across years. Both models are estimated using the \texttt{PanelOLS} 
+estimator from the Python \texttt{linearmodels} package.
+
+\subsection{Estimation Results}
+
+Table~\ref{tab:model-comparison} compares the overall fit of the two specifications. The growing-season aggregate model (Model 1) shows no statistically significant 
+relationship between weather and yield: the joint F-test on both coefficients is far from significant ($p = 0.680$). 
+The monthly model (Model 2), by contrast, is highly significant ($p < 0.001$), despite including twelve additional regressors. 
+This is a direct, model-based confirmation of the pattern suggested descriptively in Figure~\ref{fig:scatter-prcp} and 
+Figure~\ref{fig:monthly-corr}: growing-season weather totals obscure a relationship between weather and yield that becomes visible 
+once weather is disaggregated by month. For both models, the F-test for poolability strongly rejects the pooled, no-fixed-effects specification, 
+confirming that the county and year fixed effects are statistically necessary rather than a modeling convenience.
+
+\begin{table}[h]
+\centering
+\caption{Model fit comparison: growing-season totals vs. monthly weather}
+\label{tab:model-comparison}
+\begin{tabular}{lrr}
+\toprule
+ & Model 1: Totals & Model 2: Monthly \\
+\midrule
+Weather regressors & 2 & 14 \\
+R-squared (within) & 0.022 & $-0.352$ \\
+F-statistic (robust) & 0.39 & 3.88 \\
+P-value & 0.680 & $<0.001$ \\
+F-test for poolability & 19.98 & 15.13 \\
+P-value (poolability) & $<0.001$ & $<0.001$ \\
+N & 420 & 420 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:monthly-coefs} reports the full set of coefficients from the monthly specification. Two months stand out as individually significant 
+at the 5\% level: April temperature ($\beta = 227.4$, $p = 0.016$) and October precipitation ($\beta = 1.34$, $p = 0.015$), both with a positive sign. 
+The October precipitation result is particularly notable: the raw correlation in Figure~\ref{fig:monthly-corr} showed October precipitation negatively 
+associated with yield, but once county and year fixed effects are controlled for, the relationship reverses sign and becomes positive. 
+This is consistent with the raw negative correlation being driven by confounding --- for example, years with poor statewide conditions 
+could simultaneously bring both low yields and unusual late-season rainfall for reasons unrelated to any causal effect of the rainfall 
+itself --- rather than reflecting a genuine detrimental effect of October rain, and illustrates precisely why identification strategies 
+of this kind, rather than raw correlations, are needed to interpret findings such as those of Eck et al.~\cite{InfluceceOfGrowingSeasonTempAnomalies}.
+
+\begin{table}[h]
+\centering
+\caption{Monthly weather coefficients (Model 2), dependent variable: yield (lb/acre). County and year fixed effects included; standard errors clustered by county. * p$<$0.10, ** p$<$0.05, *** p$<$0.01.}
+\label{tab:monthly-coefs}
+\begin{tabular}{lrrr}
+\toprule
+Variable & Coefficient & Std. Error & P-value \\
+\midrule
+Tavg, April & 227.37** & 94.15 & 0.016 \\
+Tavg, May & $-$76.61 & 110.91 & 0.490 \\
+Tavg, June & 124.85 & 111.93 & 0.265 \\
+Tavg, July & $-$74.43 & 92.49 & 0.422 \\
+Tavg, August & $-$39.06 & 105.48 & 0.711 \\
+Tavg, September & $-$28.11 & 86.87 & 0.746 \\
+Tavg, October & 17.14 & 71.58 & 0.811 \\
+Prcp, April & $-$0.43 & 0.58 & 0.453 \\
+Prcp, May & $-$1.14 & 0.95 & 0.233 \\
+Prcp, June & 0.33 & 0.58 & 0.570 \\
+Prcp, July & $-$0.69 & 0.49 & 0.160 \\
+Prcp, August & $-$0.86 & 0.55 & 0.117 \\
+Prcp, September & 0.24 & 0.29 & 0.395 \\
+Prcp, October & 1.34** & 0.55 & 0.015 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The remaining ten monthly coefficients are not individually distinguishable from zero at conventional significance levels, 
+despite the model as a whole being jointly significant. This is a common pattern when many correlated regressors --- each 
+month's weather is naturally correlated with neighboring months' --- are included in a single specification with a moderate 
+sample size, and should be read as a limitation of statistical power rather than evidence that those months have no effect 
+on yield. Future analysis could explore whether a quadratic term for April 
+temperature and October precipitation reveals an optimal range for each, rather than only a direction of effect.
 
 \newpage
 
